@@ -232,8 +232,8 @@ lock_release (struct lock *lock)
   ASSERT (lock != NULL);
   ASSERT (lock_held_by_current_thread (lock));
 
-  lock->holder = NULL;
   lock_up (lock);
+  lock->holder = NULL;
 }
 
 /* Returns true if the current thread holds LOCK, false
