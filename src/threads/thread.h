@@ -90,21 +90,18 @@ struct thread
     enum thread_status status;          /* Thread state. */
     char name[16];                      /* Name (for debugging purposes). */
     uint8_t *stack;                     /* Saved stack pointer. */
-    int base_priority;                   /* The base priority of the thread. Not affected by priority donation */
+    int base_priority;                   /* Valor da prioridade básica da thread. Não é afetado pela doação prioritária. */
     int priority;                       /* Priority. */
-    struct list locks;                  /* List of locks acquired by a thread */
+    struct list locks;                  /* Lista de locks adquiridos por uma thread. */
     struct list_elem allelem;           /* List element for all threads list. */
-    struct lock *blocked_on_lock;       /* The lock currently blocking the thread. Null if there isn't. */
-    /* Data for BSD scheduler */
-    fixed_point recent_cpu;             /* Recent cpu usage of thread */
-    int nice;                           /* Nice value */
+    struct lock *blocked_on_lock;       /* O lock bloqueando atualmente a thread. Null se não houver. */
+    fixed_point recent_cpu;             /* Uso recente de cpu de thread. */
+    int nice;                           /* Valor "nice". */
 
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
 
-    /* codigo começa aqui */
     int64_t sleep_ticks;
-    /* codigo termina aqui */
 
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
@@ -139,10 +136,8 @@ const char *thread_name (void);
 void thread_exit (void) NO_RETURN;
 void thread_yield (void);
 
-/* codigo começa aqui */
 bool compare_thread_time (const struct list_elem *e1, const struct list_elem *e2, void *aux);
 bool compare_thread_priority (const struct list_elem *e1, const struct list_elem *e2, void *aux);
-/* codigo termina aqui */
 
 /* Performs some operation on thread t, given auxiliary data AUX. */
 typedef void thread_action_func (struct thread *t, void *aux);

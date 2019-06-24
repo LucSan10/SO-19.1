@@ -437,7 +437,6 @@ thread_yield (void)
   intr_set_level (old_level);
 }
 
-/* codigo começa aqui */
 bool
 compare_thread_time (const struct list_elem *e1, const struct list_elem *e2, void *aux)
 {
@@ -609,7 +608,6 @@ thread_set_priority (int new_priority)
     thread_swap_to_highest_pri();
   }
 }
-/* codigo termina aqui */
 
 /* Returns the current thread's priority. */
 int

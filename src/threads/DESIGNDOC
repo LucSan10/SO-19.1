@@ -1,25 +1,14 @@
 			+--------------------+
-			|        CS 140      |
-			| PROJECT 1: THREADS |
-			|   DESIGN DOCUMENT  |
+			|       EEL 770      |
+			| PROJETO 1: THREADS |
+			|      RELATÓRIO     |
 			+--------------------+
 				   
----- GROUP ----
+---- GRUPO ----
 
->> Fill in the names and email addresses of your group members.
+Ary Andrade Neto <aryneto@poli.ufrj.br>
+Lucas Santiago Peixoto <santiagolucas643@poli.ufrj.br>
 
-FirstName LastName <email@domain.example>
-FirstName LastName <email@domain.example>
-FirstName LastName <email@domain.example>
-
----- PRELIMINARIES ----
-
->> If you have any preliminary comments on your submission, notes for the
->> TAs, or extra credit, please give them here.
-
->> Please cite any offline or online sources you consulted while
->> preparing your submission, other than the Pintos documentation, course
->> text, lecture notes, and course staff.
 
 			     ALARM CLOCK
 			     ===========
@@ -29,6 +18,13 @@ FirstName LastName <email@domain.example>
 >> A1: Copy here the declaration of each new or changed `struct' or
 >> `struct' member, global or static variable, `typedef', or
 >> enumeration.  Identify the purpose of each in 25 words or less.
+
+No arquivo timer.c:
+static struct list blocked_threads; ==> Lista para threads em espera bloqueadas.
+
+No arquivo thread.h:
+int64_t sleep_ticks; ==> Tempo de alarme da thread.
+
 
 ---- ALGORITHMS ----
 
@@ -59,6 +55,17 @@ FirstName LastName <email@domain.example>
 >> B1: Copy here the declaration of each new or changed `struct' or
 >> `struct' member, global or static variable, `typedef', or
 >> enumeration.  Identify the purpose of each in 25 words or less.
+
+No arquivo thread.h: 
+int base_priority; ==> Valor da prioridade básica da thread. Não é afetado pela doação prioritária.
+
+struct list locks; ==> Lista de locks adquiridos por uma thread.
+
+struct lock *blocked_on_lock; ==> O lock bloqueando atualmente a thread. Null se não houver.
+
+No arquivo synch.h: 
+struct list_elem elem; ==> Objeto elemento de uma lista para adicionar à lista de locks do holder da thread.
+
 
 >> B2: Explain the data structure used to track priority donation.
 >> Use ASCII art to diagram a nested donation.  (Alternately, submit a
@@ -94,6 +101,11 @@ FirstName LastName <email@domain.example>
 >> C1: Copy here the declaration of each new or changed `struct' or
 >> `struct' member, global or static variable, `typedef', or
 >> enumeration.  Identify the purpose of each in 25 words or less.
+
+fixed_point recent_cpu; ==> Uso recente de cpu de thread.
+
+int nice; ==> Valor "nice".
+
 
 ---- ALGORITHMS ----
 
