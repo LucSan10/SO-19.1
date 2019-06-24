@@ -3,7 +3,10 @@
 
 #include <debug.h>
 #include <list.h>
+#include <FixedPoint.h>
 #include <stdint.h>
+#include "threads/synch.h"
+#include "filesys/file.h"
 
 /* States in a thread's life cycle. */
 enum thread_status
@@ -87,8 +90,14 @@ struct thread
     enum thread_status status;          /* Thread state. */
     char name[16];                      /* Name (for debugging purposes). */
     uint8_t *stack;                     /* Saved stack pointer. */
+    int base_priority;                   /* The base priority of the thread. Not affected by priority donation */
     int priority;                       /* Priority. */
+    struct list locks;                  /* List of locks acquired by a thread */
     struct list_elem allelem;           /* List element for all threads list. */
+    struct lock *blocked_on_lock;       /* The lock currently blocking the thread. Null if there isn't. */
+    /* Data for BSD scheduler */
+    fixed_point recent_cpu;             /* Recent cpu usage of thread */
+    int nice;                           /* Nice value */
 
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
@@ -142,13 +151,16 @@ void thread_foreach (thread_action_func *, void *);
 int thread_get_priority (void);
 void thread_set_priority (int);
 
-/* codigo começa aqui */
-void priority_donation (struct thread* lock_thread);
-/* codigo termina aqui */
-
 int thread_get_nice (void);
 void thread_set_nice (int);
+void get_donated_priority(struct thread *t, int donated_pri);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
+
+int calculate_priority(struct thread * t);
+fixed_point calculate_recent_cpu(struct thread * t);
+fixed_point calculate_load_avg(void);
+void thread_swap_to_highest_pri(void);
+struct thread *get_thread_from_tid (tid_t);
 
 #endif /* threads/thread.h */
