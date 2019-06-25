@@ -8,9 +8,8 @@
 
 >> Fill in the names and email addresses of your group members.
 
-FirstName LastName <email@domain.example>
-FirstName LastName <email@domain.example>
-FirstName LastName <email@domain.example>
+Ary Andrade Neto <@poli.ufrj.br>
+Lucas Santiago Peixoto <santiagolucas643@poli.ufrj.br>
 
 ---- PRELIMINARIES ----
 
@@ -20,6 +19,10 @@ FirstName LastName <email@domain.example>
 >> Please cite any offline or online sources you consulted while
 >> preparing your submission, other than the Pintos documentation, course
 >> text, lecture notes, and course staff.
+
+https://github.com/yuwumichcn223/pintos
+https://github.com/microdog/pintos-project-1
+https://github.com/Ma06RC/Pintos-Busy-Wait-
 
 			     ALARM CLOCK
 			     ===========
@@ -35,21 +38,60 @@ FirstName LastName <email@domain.example>
 >> A2: Briefly describe what happens in a call to timer_sleep(),
 >> including the effects of the timer interrupt handler.
 
+Cada chamada ao timer_sleep() obtém o tempo atual do sistema em ticks que,
+somados aos ticks que a thread em questão deve dormir, resultam no tempo
+em ticks em que a thread acordará.
+
+Após obter o ponteiro para a thread atual, a função timer_sleep() desabilita
+interrupções, define o tempo do alarme na thread, insere a thread na lista
+de threads bloqueadas, em ordem crescente em relação ao tempo do alarme
+de cada thread, e por fim, bloqueia a thread com thread_block().
+
+O handler timer_interrupt(), além de contar os ticks do sistema, acorda as
+threads cujo tempo de alarme já passou. A cada chamada, ele tenta acordar a thread
+na frente da lista, ou seja, com tempo de alarme menor. Se os ticks atuais forem maiores
+que o tempo de alarme da thread, o handler retira a thread da lista, a desbloqueia
+e tenta acordar a próxima.
+
+Enquanto a thread na frente da lista tiver que acordar, e a lista de threads bloqueadas
+não for vazia, o handler continua a despertar threads bloqueadas. Assim que uma não
+tiver que acordar, ou seja, seu tempo não passou, as próximas também deverão continuar
+dormindo, assim o handler termina sua execução. 
+
+
 >> A3: What steps are taken to minimize the amount of time spent in
 >> the timer interrupt handler?
+
+A inserção de threads dormindo na lista de threads bloqueadas em ordem crescente,
+com relação ao tempo do alarme. Isso permite que o handler só procure as threads dormindo, e
+acorde as primeiras threads, ou seja, as que estão mais próximas de acordar. Na primeira thread
+que não for acordar, o handler termina sua execução.
+
 
 ---- SYNCHRONIZATION ----
 
 >> A4: How are race conditions avoided when multiple threads call
 >> timer_sleep() simultaneously?
 
+Interrupções são desabilitadas antes da thread calcular seu tempo de alarme, podendo se inserir
+na lista de espera bloqueada e se bloquear, permitindo outra thread entrar no seu lugar.
+
+
 >> A5: How are race conditions avoided when a timer interrupt occurs
 >> during a call to timer_sleep()?
+
+O tempo de início, que é usado no cálculo do tempo de alarme,
+é calculado assim que timer_sleep é chamado, impedindo que a
+thread possa dormir mais que o esperado.
+
 
 ---- RATIONALE ----
 
 >> A6: Why did you choose this design?  In what ways is it superior to
 >> another design you considered?
+
+Por indicação do professor e pela simplicidade de implementação.
+
 
 			 PRIORITY SCHEDULING
 			 ===================
@@ -64,16 +106,82 @@ FirstName LastName <email@domain.example>
 >> Use ASCII art to diagram a nested donation.  (Alternately, submit a
 >> .png file.)
 
+	T1    T2  T3    T4
+	^      ^  ^	 ^
+	 \    /	   \    /
+	  \  /	    \  /
+	   vv	     vv
+	   L1	     L2
+	   ^	      ^
+	   |	      |
+	   v	      v
+	   T5	     T6
+	   ^	      ^
+	    \	     /
+	     \	    /
+	      \	   /
+	       \  /
+		vv
+		L3
+		^
+		|
+		v
+		T7
+		 
+T1 e T2 esperam por L1, segurado por T5.
+T3 e T4 esperam por L2, segurado por T6.
+T5 e T6 esperam por L3, segurado por T7.
+
+Neste caso, T1 e T2 possuem L1 no campo de lock que elas esperam, com L1 tendo
+essas threads na sua lista de espera. T5 tem L1 como o lock que ela segura, e L3
+como o lock que ela espera. Essa organização bidirecional (pode-se encontrar T5
+a partir de T1 e vice-versa) permite doação de prioridade aninhada, quando uma
+thread que segura um lock estiver bloqueada por outro lock. A prioridade base é
+usada para comparação entre as prioridades de outras threads, e a prioridade é
+usada para ordenação na lista de threads em ready.
+
+
 ---- ALGORITHMS ----
 
 >> B3: How do you ensure that the highest priority thread waiting for
 >> a lock, semaphore, or condition variable wakes up first?
 
+A lista de threads em espera desses métodos de sincronização estão em
+ordem descrescente de prioridade, ou seja, maior prioridade na frente.
+No momento que uma thread cede espaço para outras executarem, as da frente
+são removidas primeiro da lista de espera.
+
+
 >> B4: Describe the sequence of events when a call to lock_acquire()
 >> causes a priority donation.  How is nested donation handled?
 
+Assim que uma thread T1 chama lock_acquire em L1, assume-se que T1
+ficará bloqueada, assim, seu blocked_by_lock é definido como L1.
+Se uma thread T2 segurar L1 e a prioridade de T2 for menor que a de T1,
+T1 doa sua prioridade para T2, insere-se T1 na lista de espera de L1,
+mantendo a ordenação dessa lista, e bloquea-se T1, caso T2 não estiver
+esperando por outro lock L2.
+
+Se T2 estiver esperando por L2, definem-se dois ponteiros, um para a T2
+e outro para L2, que permitem doação aninhada. Se T3, que segura L2, tiver
+prioridade menor que T2, que agora possui a prioridade de T1, T2 doa sua
+prioridade para T3. Os dois ponteiros passam para o próximo nível de thread-lock
+caso T3 esteja esperando por um lock e se a prioridade de T2 era maior que a de
+T3. Se não, a doação termina e o lock_acquire segue inserindo T1 na lista de espera
+de L1 e bloqueando T1.
+
+A cada doação, a o elemento de lista de thread que recebe a prioridade
+é reposicionada na lista de acordo com a sua prioridade.
+
+
 >> B5: Describe the sequence of events when lock_release() is called
 >> on a lock that a higher-priority thread is waiting for.
+
+Primeiro, removemos o lock L1 da lista de locks que a thread T1 segura. Depois,
+redefine-se a prioridade de T1 usando sua prioridade base (que não conta doações)
+e locks que T1 ainda possuir. Por fim, libera-se L1 para outra thread T2, com
+a maior prioridade dentre as que esperam por L1, entrar.
+
 
 ---- SYNCHRONIZATION ----
 
@@ -81,10 +189,23 @@ FirstName LastName <email@domain.example>
 >> how your implementation avoids it.  Can you use a lock to avoid
 >> this race?
 
+Se uma thread T1 doar sua prioridade para uma thread T2 após definir o máximo,
+tal máximo irá sobrescrever a doação de T1. Se a prioridade de T1 for a maior,
+ela será sobrescrita. Esse erro é corrigido desabilitando interrupções.
+O lock poderia ser usado, porém ele teria que ser incluído em todas as ocorrências
+do thread_set_priority(). Como o lock muda a lista de locks que uma thread possui,
+deadlocks podem ser gerados, pois o lock poderia se chamar em alguns casos.
+
+
 ---- RATIONALE ----
 
 >> B7: Why did you choose this design?  In what ways is it superior to
 >> another design you considered?
+
+Manter a lista de espera de locks, semáforos e variáveis de condição ordenadas
+pela prioridade permite remoção em O(1), embora a reordenação e inserção sejam O(n).
+Escolher uma implementação iterativa por while, ao invés de uma puramente recursiva,
+impede possível overflow na pilha de chamada de função.
 
 			  ADVANCED SCHEDULER
 			  ==================
